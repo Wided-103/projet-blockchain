@@ -1,57 +1,105 @@
-# Sample Hardhat 3 Project (`mocha` and `ethers`)
+# Réseau IoT sécurisé par blockchain
 
-This project showcases a Hardhat 3 project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+Prototype qui garantit l'**authenticité** et l'**intégrité** des mesures de capteurs IoT grâce à un smart contract Solidity.
 
-To learn more about Hardhat 3, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3](https://hardhat.org/hardhat3-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+![Tableau de bord](docs/dashboard.png)
 
-## Project Overview
+## Problème
 
-This example project includes:
+Dans un réseau IoT (température, humidité, etc.), rien ne prouve qu'une mesure n'a pas été modifiée après son envoi, ni qu'elle vient d'un capteur légitime.
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+## Solution
 
-## Usage
+- Seuls les **nœuds autorisés par l'administrateur** peuvent enregistrer une mesure.
+- La blockchain ne stocke pas la donnée brute, mais son **hash** (keccak256), avec l'adresse du nœud et la date.
+- Pour vérifier une mesure, on **recalcule le hash** de la donnée et on le compare à celui de la chaîne. S'il diffère, la donnée a été falsifiée.
 
-### Running Tests
+## Architecture
 
-To run all the tests in the project, execute the following command:
+```
+Nœuds IoT (simulés) ──hash──▶ Smart contract MesureLog ◀── Tableau de bord
+        │                         (blockchain Hardhat)            ▲
+        └── donnée brute ──▶ dashboard-data.json ─────────────────┘
+```
 
-```shell
+## Technologies
+
+Solidity · Hardhat 3 · TypeScript · ethers.js v6 · HTML/CSS/JavaScript
+
+## Structure du projet
+
+| Dossier / fichier | Rôle |
+|---|---|
+| `contracts/MesureLog.sol` | Smart contract (autorisation des nœuds, enregistrement des mesures) |
+| `test/Mesurelog.ts` | Tests automatisés du contrat |
+| `scripts/demo.ts` | Démo simple : déploiement, autorisation, enregistrement, vérification |
+| `scripts/simulateur.ts` | Simulation de 3 nœuds, d'un intrus et d'une falsification |
+| `dashboard.html` | Tableau de bord de vérification d'intégrité |
+
+## Installation
+
+Prérequis : Node.js (v22 recommandé) et npm.
+
+```bash
+git clone https://github.com/Wided-103/projet-blockchain.git
+cd projet-blockchain
+npm install
+```
+
+## Utilisation
+
+**1. Lancer les tests**
+
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+**2. Lancer la simulation**
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
+```bash
+npx hardhat run scripts/simulateur.ts
 ```
 
-### Make a deployment to Sepolia
+Résultat attendu :
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+```
+Mesures enregistrées : 9
+Intrus refusé
+Mesure 4 falsifiée !
+Intégrité : 8/9 valides
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+Le script génère `dashboard-data.json`.
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+**3. Ouvrir le tableau de bord**
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+```bash
+npx serve .
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+Puis ouvrir `http://localhost:3000/dashboard.html`.
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+Le bouton « Falsifier une mesure » modifie une donnée côté navigateur pour montrer la détection en direct.
+
+## Scénarios démontrés
+
+1. **Autorisation** : seul l'administrateur peut autoriser un nœud.
+2. **Rejet d'intrus** : un nœud non autorisé ne peut pas enregistrer de mesure.
+3. **Traçabilité** : chaque mesure est horodatée et liée à son nœud.
+4. **Détection de falsification** : toute modification de la donnée change son hash.
+
+## Limites
+
+- Les mesures sont **simulées** (valeurs aléatoires), il n'y a pas de capteur physique.
+- La blockchain est un **réseau local Hardhat**, pas un réseau public.
+- Les données brutes sont stockées hors chaîne (`dashboard-data.json`) ; seule l'empreinte est sur la blockchain.
+
+## Pistes d'amélioration
+
+- Connecter un **ESP32 avec capteur DHT22** pour des mesures réelles.
+- Déployer sur un réseau de test (Sepolia).
+- Lire directement les mesures depuis la blockchain dans le tableau de bord.
+
+## Auteure
+
+Wided Jbili, étudiante en Licence Ingénierie des Systèmes Informatiques, ISSAT Kairouan.

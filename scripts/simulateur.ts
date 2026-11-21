@@ -47,4 +47,15 @@ for (let i = 0; i < releves.length; i++) {
 }
 console.log(`Intégrité : ${ok}/${releves.length} valides`);
 
-writeFileSync("releves.json", JSON.stringify(releves, null, 2));
+const dashData = [];
+for (let i = 0; i < releves.length; i++) {
+  const m = await contrat.mesures(i);
+  dashData.push({
+    i,
+    noeud: m.noeud,
+    donnee: releves[i].donnee,
+    hashChaine: m.hashMesure,
+    date: Number(m.date),
+  });
+}
+writeFileSync("dashboard-data.json", JSON.stringify(dashData, null, 2));
